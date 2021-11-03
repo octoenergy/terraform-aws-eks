@@ -34,11 +34,9 @@ locals {
       metadata_http_tokens                 = var.workers_group_defaults["metadata_http_tokens"]
       metadata_http_put_response_hop_limit = var.workers_group_defaults["metadata_http_put_response_hop_limit"]
       ami_is_eks_optimized                 = true
-      user_data = {
-        mime_type           = "text/x-shellscript"
-        template_extra_args = lookup(var.workers_group_defaults, "userdata_template_file", {})
-        template_file       = lookup(var.workers_group_defaults, "userdata_template_file", "${path.module}/templates/userdata.sh.tpl")
-      }
+      user_data_mime_type                  = "text/x-shellscript"
+      user_data_template_extra_args        = lookup(var.workers_group_defaults, "userdata_template_file", {})
+      user_data_template_file              = lookup(var.workers_group_defaults, "userdata_template_file", "${path.module}/templates/userdata.sh.tpl")
     },
     var.node_groups_defaults,
     v,
@@ -55,7 +53,7 @@ locals {
   ) }
 
   node_groups_userdata = { for k, v in local.node_groups_expanded : k => templatefile(
-      v["user_data"]["template_file"],
+      v["user_data_template_file"],
       merge(
         {
           cluster_name         = var.cluster_name
@@ -69,7 +67,7 @@ locals {
           capacity_type        = lookup(v, "capacity_type", "ON_DEMAND")
           append_labels        = length(lookup(v, "k8s_labels", {})) > 0 ? ",${join(",", [for key, value in lookup(v, "k8s_labels", {}) : "${key}=${value}"])}" : ""
         },
-        lookup(v["user_data"], "template_extra_args", {})
+        v["user_data_template_extra_args"]
       )
     ) if v["create_launch_template"]
   }
